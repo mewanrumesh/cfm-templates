@@ -1,0 +1,53 @@
+Resources:
+  RDSSubnetGroup:  # Create RDS Subnet group.
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: DBSubnetGroup
+      DBSubnetGroupDescription: DB Subnet Group
+      SubnetIds:
+       - !ImportValue vpc-PrivateSubnet1id
+       - !ImportValue vpc-PrivateSubnet2id
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup # Create RDS Security Group
+    Properties:
+      GroupDescription: My security group for PostgreSQL Serverless
+      VpcId: !ImportValue vpc-VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.10.0.0/16
+
+  DBSecret:
+    Type: AWS::SecretsManager::Secret # Store psql database username and password Secrect Manager
+    Properties: 
+      Name: DatabaseSecret
+      Description: Secret for PostgreSQL database
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"psqladmin"}'
+        GenerateStringKey: "password"
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+        IncludeSpace: false
+
+  MyDBCluster:
+    Type: AWS::RDS::DBCluster # Create PSQL RDS Cluster(Reffer username and password from Secret Manager)
+    Properties:
+      Engine: aurora-postgresql
+      EngineMode: serverless
+      EngineVersion: '13.3'
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref DBSecret, ':SecretString:username}}' ]]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DBSecret, ':SecretString:password}}' ]]
+      DatabaseName: psqldb
+      DBSubnetGroupName: !Ref RDSSubnetGroup
+      EnableHttpEndpoint: true 
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: 2
+        MaxCapacity: 4
+        SecondsUntilAutoPause: 300
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      VpcSecurityGroupIds:
+        - !Ref RDSSecurityGroup

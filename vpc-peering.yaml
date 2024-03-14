@@ -1,0 +1,29 @@
+Resources:
+  VPCPeeringConnection: # VPC Peering in Between Database VPC and System VPC
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      PeerVpcId: !ImportValue vpn-system-vpc-2-VpcId
+      VpcId: !ImportValue database-system-vpc-1-VpcId
+      Tags:
+        - Key: Name
+          Value: "VPC Peering Connection"
+
+  #VPCPeeringConnectionAccepter:
+  #  Type: AWS::EC2::VPCPeeringConnectionAccepter
+  #  Properties:
+  #    PeerVpcId: !ImportValue database-system-vpc-1-VpcId
+  #    VpcId: !ImportValue vpn-system-vpc-2-VpcId
+
+  addRoutedbprivate:
+    Type: AWS::EC2::Route  # Add VPC Peering Route to RDS Private Route Table 
+    Properties:
+      RouteTableId: !ImportValue database-system-vpc-1-PrivateRouteTable
+      DestinationCidrBlock: 10.40.0.0/16    #This is system vpc cidr 
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection
+
+  addRoutesystemprivate:
+    Type: AWS::EC2::Route  # Add VPC Peering Route to System Private Route Table
+    Properties:
+      RouteTableId: !ImportValue vpn-system-vpc-2-PrivateRouteTable
+      DestinationCidrBlock: 10.10.0.0/16    #This is db vpc cidr 
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection

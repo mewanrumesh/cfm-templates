@@ -1,0 +1,172 @@
+Description: Create VPC Template for Database and vpn system vpc
+Parameters:
+  VpcCidr:
+    Description: export VPC CIDR  # vpc cidr for database and system vpc
+    Type: String
+    Default: 10.10.0.0/16
+
+# Puclic and Private subnet cidr for database and system vpc
+  PublicSubnet1CIDR:
+    Description: Export public subnet 1 cidr 
+    Type: String
+    Default: 10.10.10.0/24
+
+  PublicSubnet2CIDR:
+    Description: Export Public subnet 2 cidr
+    Type: String
+    Default: 10.10.20.0/24
+
+  PrivateSubnet1CIDR:
+    Description: Export Private Subnet 1 cidr
+    Type: String
+    Default: 10.10.30.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Export private Subnet 2 cidr
+    Type: String
+    Default: 10.10.40.0/24
+
+Resources:
+  VPC:
+   Type: AWS::EC2::VPC
+   Properties:
+    CidrBlock: !Ref VpcCidr # Reffer vpcCidr parameter to create vpc
+    EnableDnsHostnames: true
+    EnableDnsSupport: true
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway # Create Internet Gateway
+   
+  InternetGatewayAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+     InternetGatewayId: !Ref InternetGateway # Attached internet gateway
+     VpcId: !Ref VPC
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      #AvailabilityZone: !Select [ 0, !GetAZs '']
+      AvailabilityZone: us-east-1a
+      CidrBlock: !Ref PublicSubnet1CIDR # Create public subnet1 reffering PublicSubnet1CIDR paramter
+      VpcId: !Ref VPC
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1b
+      CidrBlock: !Ref PublicSubnet2CIDR # Create public subnet2 reffering PublicSubnet2CIDR paramter
+      VpcId: !Ref VPC
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1a
+      CidrBlock: !Ref PrivateSubnet1CIDR # Create private subnet1 reffering PrivateSubnet1CIDR paramter
+      VpcId: !Ref VPC
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: us-east-1b
+      CidrBlock: !Ref PrivateSubnet2CIDR # Create private subnet2 reffering PrivateSubnet2CIDR paramter
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable # Create Public Route Table
+    Properties:
+      VpcId: !Ref VPC
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable # Create private Route Table
+    Properties:
+         VpcId: !Ref VPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable # Add Route to Public Route Table
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  Publicsubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1 # Subnet Associate to Public Route table
+      RouteTableId: !Ref PublicRouteTable
+
+  Publicsubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2 # Subnet Associate to Public Route table
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+         SubnetId: !Ref PrivateSubnet1 # Subnet Associate to Private Route table
+         RouteTableId: !Ref PrivateRouteTable 
+
+  PrivateSubnet2Association:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+         SubnetId: !Ref PrivateSubnet2 # Subnet Associate to Private Route table
+         RouteTableId: !Ref PrivateRouteTable 
+# Outputs values
+Outputs:
+  vpcid:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcId"
+  #vpcid
+  vpccidr:
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub "${AWS::StackName}-VpcCidr"
+  
+  #subnetsIDs
+  publicsubnet1id:
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1id"
+
+  publicsubnet2id:
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet2id"
+
+  privatesubnet1id:
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1id"
+
+  privatesubnet2id:
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet2id"
+
+  #SubnetCIDR
+  publicsubnet1cidr:
+    Value: !Ref PublicSubnet1CIDR
+    Export:
+      Name: !Sub "${AWS::StackName}-publicsubnet1cidr"
+
+  publicsubnet2cidr:
+    Value: !Ref PublicSubnet2CIDR
+    Export:
+      Name: !Sub "${AWS::StackName}-publicsubnet2cidr"
+
+  privatesubnet1cidr:
+    Value: !Ref PrivateSubnet1CIDR
+    Export:
+      Name: !Sub "${AWS::StackName}-privatesubnet1cidr"
+
+  privatesubnet2cidr:
+    Value: !Ref PrivateSubnet2CIDR
+    Export:
+      Name: !Sub "${AWS::StackName}-privatesubnet2cidr"
+
+  privateroutetable:
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateRouteTable"
